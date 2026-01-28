@@ -4,6 +4,8 @@ import { Energy } from './energy'
 import { Impact } from './impact'
 import { Slash } from './slash'
 import { Spawn } from './spawn'
+
+
 export const Particles = () => {
   return (
     <>
@@ -12,6 +14,7 @@ export const Particles = () => {
       <Impact />
       <Spawn />
       <EnemyDeath />
+      {/*<VFXParticles debug />*/}
     </>
   )
 }

@@ -47,7 +47,7 @@ function App() {
           </KeyboardControls>
 
 
-          <EnemySystem initialCount={10} spawnRadius={6} />
+          {/* <EnemySystem initialCount={10} spawnRadius={6} /> */}
           {/* <MultiplayerSystem /> Added MultiplayerSystem */}
           {/*<Stats />*/}
           <Preload all />

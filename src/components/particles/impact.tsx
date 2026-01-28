@@ -1,4 +1,4 @@
-import { VFXParticles } from "../VFXParticles"
+import { VFXParticles } from "@/components/vfx/r3f-vfx/src"
 import { SphereGeometry } from "three/webgpu"
 import { TextureLoader } from "three/webgpu"
 import { texture, uv, vec4 } from "three/tsl"

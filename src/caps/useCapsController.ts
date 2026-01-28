@@ -18,7 +18,7 @@ import {
   PARRY_COOLDOWN_MS,
 } from './types'
 import { eventBus, EVENTS } from '../constants'
-import { useVFXEmitter } from '@/components/VFXParticles/VFXEmitter'
+import { useVFXEmitter } from '@/components/vfx/r3f-vfx/src'
 import { me } from 'playroomkit'
 
 const PARRY_SPEED = 2

@@ -16,7 +16,7 @@ import {
 import { noiseTexture } from '../textures/noiseTexture'
 import { useGLTF } from '@react-three/drei'
 import { voronoiTexture } from '../textures/voronoiTexture'
-import { VFXParticles } from '../VFXParticles'
+import { VFXParticles } from '@/components/vfx/r3f-vfx/src'
 
 type GLTFResult = ReturnType<typeof useGLTF> & {
   nodes: { Cylinder: { geometry: THREE.BufferGeometry } }
