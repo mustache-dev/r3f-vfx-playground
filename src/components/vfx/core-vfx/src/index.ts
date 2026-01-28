@@ -1,4 +1,4 @@
-export { type CoreState, coreStore } from './core-store';
+export { type CoreState, coreStore } from './core-store'
 
 // Constants
 export {
@@ -10,7 +10,7 @@ export {
   Lighting,
   MAX_ATTRACTORS,
   CURVE_RESOLUTION,
-} from './constants';
+} from './constants'
 
 // Types
 export type {
@@ -25,7 +25,7 @@ export type {
   FlipbookConfig,
   StretchConfig,
   BaseParticleProps,
-} from './types';
+} from './types'
 
 // Utilities
 export {
@@ -35,7 +35,7 @@ export {
   axisToNumber,
   toRotation3D,
   lifetimeToFadeRate,
-} from './utils';
+} from './utils'
 
 // Curve utilities
 export {
@@ -43,8 +43,10 @@ export {
   sampleCurveAtX,
   bakeCurveToArray,
   createCombinedCurveTexture,
+  createDefaultCurveTexture,
+  loadCurveTextureFromPath,
   DEFAULT_LINEAR_CURVE,
-} from './curves';
+} from './curves'
 
 // Shader factories
 export {
@@ -53,11 +55,7 @@ export {
   createUpdateCompute,
   createParticleMaterial,
   selectColor,
-} from './shaders';
+} from './shaders'
 
 // Shader types
-export type {
-  ParticleStorageArrays,
-  ParticleUniforms,
-  MaterialOptions,
-} from './shaders';
+export type { ParticleStorageArrays, ParticleUniforms, MaterialOptions } from './shaders'

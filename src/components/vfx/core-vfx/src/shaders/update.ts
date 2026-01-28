@@ -29,7 +29,8 @@ export const createUpdateCompute = (
     const velocity = storage.velocities.element(instanceIndex);
     const lifetime = storage.lifetimes.element(instanceIndex);
     const fadeRate = storage.fadeRates.element(instanceIndex);
-    const particleRotation = storage.particleRotations.element(instanceIndex);
+    // Optional array (null when no rotation/rotationSpeed)
+    const particleRotation = storage.particleRotations?.element(instanceIndex);
     const particleSize = storage.particleSizes.element(instanceIndex);
     const dt = uniforms.deltaTime;
 
@@ -259,39 +260,42 @@ export const createUpdateCompute = (
         });
       });
 
-      // Calculate rotation speed per-particle using hash (consistent per particle)
-      const idx = float(instanceIndex);
-      const rotSpeedX = mix(
-        uniforms.rotationSpeedMinX,
-        uniforms.rotationSpeedMaxX,
-        hash(idx.add(8888))
-      );
-      const rotSpeedY = mix(
-        uniforms.rotationSpeedMinY,
-        uniforms.rotationSpeedMaxY,
-        hash(idx.add(9999))
-      );
-      const rotSpeedZ = mix(
-        uniforms.rotationSpeedMinZ,
-        uniforms.rotationSpeedMaxZ,
-        hash(idx.add(10101))
-      );
+      // Update rotation only if rotation array exists (no rotation when array is null)
+      if (particleRotation) {
+        // Calculate rotation speed per-particle using hash (consistent per particle)
+        const idx = float(instanceIndex);
+        const rotSpeedX = mix(
+          uniforms.rotationSpeedMinX,
+          uniforms.rotationSpeedMaxX,
+          hash(idx.add(8888))
+        );
+        const rotSpeedY = mix(
+          uniforms.rotationSpeedMinY,
+          uniforms.rotationSpeedMaxY,
+          hash(idx.add(9999))
+        );
+        const rotSpeedZ = mix(
+          uniforms.rotationSpeedMinZ,
+          uniforms.rotationSpeedMaxZ,
+          hash(idx.add(10101))
+        );
 
-      // Sample rotation speed curve from A channel (R=size, G=opacity, B=velocity, A=rotSpeed)
-      const rotSpeedCurveSample = texture(
-        curveTexture,
-        vec2(progress, float(0.5))
-      ).w;
-      const rotSpeedMultiplier = uniforms.rotationSpeedCurveEnabled
-        .greaterThan(0.5)
-        .select(rotSpeedCurveSample, float(1));
+        // Sample rotation speed curve from A channel (R=size, G=opacity, B=velocity, A=rotSpeed)
+        const rotSpeedCurveSample = texture(
+          curveTexture,
+          vec2(progress, float(0.5))
+        ).w;
+        const rotSpeedMultiplier = uniforms.rotationSpeedCurveEnabled
+          .greaterThan(0.5)
+          .select(rotSpeedCurveSample, float(1));
 
-      // Apply rotation speed (radians/second * deltaTime * curve multiplier)
-      particleRotation.addAssign(
-        vec3(rotSpeedX, rotSpeedY, rotSpeedZ)
-          .mul(uniforms.deltaTime)
-          .mul(rotSpeedMultiplier)
-      );
+        // Apply rotation speed (radians/second * deltaTime * curve multiplier)
+        particleRotation.addAssign(
+          vec3(rotSpeedX, rotSpeedY, rotSpeedZ)
+            .mul(uniforms.deltaTime)
+            .mul(rotSpeedMultiplier)
+        );
+      }
 
       // fadeRate is per-second, multiply by actual deltaTime
       lifetime.subAssign(fadeRate.mul(uniforms.deltaTime));

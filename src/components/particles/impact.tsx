@@ -7,11 +7,11 @@ export const Impact = () => {
     return (
         <>
             <VFXParticles
+                curveTexturePath="/vfx/impact.bin"
                 name="impact"
                 autoStart={false}
                 geometry={new SphereGeometry(0.5, 16, 12)}
                 maxParticles={30}
-                position={[0, 0, 0]}
                 emitCount={30}
                 delay={0.5}
                 intensity={6}
@@ -22,22 +22,7 @@ export const Impact = () => {
                 gravity={[0, 0, 0]}
                 speed={[10, 50]}
                 lifetime={[0.1, 0.8]}
-                velocityCurve={{
-                    points: [
-                        {
-                            pos: [0, 1],
-                            handleOut: [0.1521902568802029, -0.39145641610623505]
-                        },
-                        {
-                            pos: [1, 0],
-                            handleIn: [-0.22800959999999998, 2.792312268148683e-17]
-                        }
-                    ]
-                }}
-                startPosition={[[0, 0], [0, 0], [0, 0]]}
                 startPositionAsDirection={true}
-                rotation={[0, 0]}
-                rotationSpeed={[0, 0]}
                 orientToDirection={true}
                 orientAxis="y"
                 stretchBySpeed={{
@@ -60,10 +45,10 @@ export const Impact = () => {
             />
             <VFXParticles
                 // geometry={new PlaneGeometry(1, 1, 1, 1)}
+                curveTexturePath="/vfx/impact-flare.bin"
                 depthTest={false}
                 renderOrder={9999}
                 maxParticles={500}
-                position={[0, 0, 0]}
                 autoStart={false}
                 name="impact-flare"
                 emitCount={20}
@@ -71,23 +56,6 @@ export const Impact = () => {
                 // delay={1}
                 size={[0.1, 1]}
                 fadeSize={[1, 0]}
-                fadeSizeCurve={{
-                    points: [
-                        {
-                            pos: [0, 0.5],
-                            handleOut: [0.33, 0]
-                        },
-                        {
-                            pos: [0.5, 1],
-                            handleIn: [-0.1, 0],
-                            handleOut: [0.1, 0]
-                        },
-                        {
-                            pos: [1, 0],
-                            handleIn: [-0.33, 0]
-                        }
-                    ]
-                }}
                 colorStart={["#ffffff"]}
                 fadeOpacity={[1, 0]}
                 gravity={[0, 0, 0]}
@@ -98,9 +66,7 @@ export const Impact = () => {
                     easing: "linear"
                 }}
                 direction={[[-1, 1], [0, 1], [-1, 1]]}
-                startPosition={[[0, 0], [0, 0], [0, 0]]}
                 rotation={[[-Math.PI / 2, Math.PI / 2], [-Math.PI / 2, Math.PI / 2], [-Math.PI / 2, Math.PI / 2]]}
-
                 rotationSpeed={[0, 0]}
                 appearance="gradient"
                 // blending={1}

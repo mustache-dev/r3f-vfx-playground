@@ -10,6 +10,7 @@ import {
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three/webgpu'
 import { useVFXStore } from './react-store'
+import { useCurveTextureAsync } from './useCurveTextureAsync'
 import { uniform, instancedArray } from 'three/tsl'
 import {
   Appearance,
@@ -172,6 +173,12 @@ export type VFXParticlesProps = {
   } | null
   /** Show debug control panel */
   debug?: boolean
+  /** Path to pre-baked curve texture (skips runtime baking for faster load) */
+  curveTexturePath?: string | null
+  /** Depth test */
+  depthTest?: boolean
+  /** Render order (higher values render on top) */
+  renderOrder?: number
 }
 
 export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXParticles(
@@ -249,6 +256,12 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
     collision = null,
     // Debug mode - shows tweakable control panel
     debug = false,
+    // Path to pre-baked curve texture (skips runtime baking for faster load)
+    curveTexturePath = null,
+    // Depth test
+    depthTest = true,
+    // Render order
+    renderOrder = 0,
   },
   ref
 ) {
@@ -275,6 +288,26 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
   const [activeFadeOpacityCurve, setActiveFadeOpacityCurve] = useState(fadeOpacityCurve)
   const [activeVelocityCurve, setActiveVelocityCurve] = useState(velocityCurve)
   const [activeRotationSpeedCurve, setActiveRotationSpeedCurve] = useState(rotationSpeedCurve)
+  // Per-particle color arrays needed if: multiple start colors OR color transition
+  const [activeNeedsPerParticleColor, setActiveNeedsPerParticleColor] = useState(
+    colorStart.length > 1 || colorEnd !== null
+  )
+  // Rotation array needed if rotation or rotationSpeed is non-default
+  // Default rotation = [0,0] or [[0,0],[0,0],[0,0]], default rotationSpeed = [0,0] or [[0,0],[0,0],[0,0]]
+  const isNonDefaultRotation = (r: Rotation3DInput) => {
+    if (typeof r === 'number') return r !== 0
+    if (Array.isArray(r) && r.length === 2 && typeof r[0] === 'number') {
+      return r[0] !== 0 || r[1] !== 0
+    }
+    // 3D format [[minX, maxX], [minY, maxY], [minZ, maxZ]]
+    if (Array.isArray(r)) {
+      return r.some((axis) => Array.isArray(axis) && (axis[0] !== 0 || axis[1] !== 0))
+    }
+    return false
+  }
+  const [activeNeedsRotation, setActiveNeedsRotation] = useState(
+    isNonDefaultRotation(rotation) || isNonDefaultRotation(rotationSpeed)
+  )
 
   // Keep refs in sync with props (when not in debug mode)
   useEffect(() => {
@@ -296,6 +329,8 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
       setActiveFadeOpacityCurve(fadeOpacityCurve)
       setActiveVelocityCurve(velocityCurve)
       setActiveRotationSpeedCurve(rotationSpeedCurve)
+      setActiveNeedsPerParticleColor(colorStart.length > 1 || colorEnd !== null)
+      setActiveNeedsRotation(isNonDefaultRotation(rotation) || isNonDefaultRotation(rotationSpeed))
     }
   }, [
     debug,
@@ -304,11 +339,15 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
     appearance,
     orientToDirection,
     geometry,
+    colorStart.length,
+    colorEnd,
     shadow,
     fadeSizeCurve,
     fadeOpacityCurve,
     velocityCurve,
     rotationSpeedCurve,
+    rotation,
+    rotationSpeed,
   ])
 
   // Normalize props to [min, max] ranges
@@ -319,22 +358,19 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
 
   // Create combined curve texture for GPU sampling (use active curves for debug mode)
   // R = size, G = opacity, B = velocity, A = rotation speed
-  const curveTexture = useMemo(() => {
-    return createCombinedCurveTexture(
-      activeFadeSizeCurve,
-      activeFadeOpacityCurve,
-      activeVelocityCurve,
-      activeRotationSpeedCurve
-    )
-  }, [activeFadeSizeCurve, activeFadeOpacityCurve, activeVelocityCurve, activeRotationSpeedCurve])
+  // If curveTexturePath is provided, loads pre-baked texture (instant)
+  // Otherwise, bakes curves in web worker (slower but flexible)
+  const curveTexture = useCurveTextureAsync(
+    activeFadeSizeCurve,
+    activeFadeOpacityCurve,
+    activeVelocityCurve,
+    activeRotationSpeedCurve,
+    curveTexturePath
+  )
 
-  // Dispose curve texture when it changes or component unmounts
+  // Note: curveTexture is managed by useCurveTextureAsync hook, no manual disposal needed here
   const prevCurveTextureRef = useRef<THREE.DataTexture | null>(null)
   useEffect(() => {
-    // Dispose previous texture if it changed
-    if (prevCurveTextureRef.current && prevCurveTextureRef.current !== curveTexture) {
-      prevCurveTextureRef.current.dispose()
-    }
     prevCurveTextureRef.current = curveTexture
 
     return () => {
@@ -350,6 +386,16 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
   const startPosition3D = useMemo(() => toRotation3D(startPosition), [startPosition])
   const emitterRadiusRange = useMemo(() => toRange(emitterRadius, [0, 1]), [emitterRadius])
   const emitterHeightRange = useMemo(() => toRange(emitterHeight, [0, 1]), [emitterHeight])
+
+  // Determine which features need per-particle data
+  // Uses state so debug panel can trigger storage array recreation
+  const activeFeatures = useMemo(
+    () => ({
+      needsPerParticleColor: activeNeedsPerParticleColor,
+      needsRotation: activeNeedsRotation,
+    }),
+    [activeNeedsPerParticleColor, activeNeedsRotation]
+  )
 
   // Parse friction object: { intensity: [start, end] or single value, easing: string }
   const frictionIntensityRange = useMemo(() => {
@@ -495,13 +541,14 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
       softParticlesEnabled: uniform(softParticles ? 1 : 0),
       softDistance: uniform(softDistance),
       // Velocity curve (replaces friction when enabled)
-      velocityCurveEnabled: uniform(velocityCurve ? 1 : 0),
+      // Enable if velocityCurve prop is set OR curveTexturePath is provided
+      velocityCurveEnabled: uniform(velocityCurve || curveTexturePath ? 1 : 0),
       // Rotation speed curve (modulates rotation speed over lifetime)
-      rotationSpeedCurveEnabled: uniform(rotationSpeedCurve ? 1 : 0),
+      rotationSpeedCurveEnabled: uniform(rotationSpeedCurve || curveTexturePath ? 1 : 0),
       // Fade size curve (when disabled, uses fadeSize prop interpolation)
-      fadeSizeCurveEnabled: uniform(fadeSizeCurve ? 1 : 0),
+      fadeSizeCurveEnabled: uniform(fadeSizeCurve || curveTexturePath ? 1 : 0),
       // Fade opacity curve (when disabled, uses fadeOpacity prop interpolation)
-      fadeOpacityCurveEnabled: uniform(fadeOpacityCurve ? 1 : 0),
+      fadeOpacityCurveEnabled: uniform(fadeOpacityCurve || curveTexturePath ? 1 : 0),
       // Orient axis: 0=+X, 1=+Y, 2=+Z, 3=-X, 4=-Y, 5=-Z
       orientAxisType: uniform(axisToNumber(orientAxis)),
       // Stretch by speed (uses effective velocity after curve modifier)
@@ -648,16 +695,17 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
     uniforms.softDistance.value = softDistance
 
     // Velocity curve (when enabled, overrides friction)
-    uniforms.velocityCurveEnabled.value = velocityCurve ? 1 : 0
+    // Enable if velocityCurve prop is set OR curveTexturePath is provided
+    uniforms.velocityCurveEnabled.value = velocityCurve || curveTexturePath ? 1 : 0
 
     // Rotation speed curve
-    uniforms.rotationSpeedCurveEnabled.value = rotationSpeedCurve ? 1 : 0
+    uniforms.rotationSpeedCurveEnabled.value = rotationSpeedCurve || curveTexturePath ? 1 : 0
 
     // Fade size curve (when enabled, uses curve instead of fadeSize prop)
-    uniforms.fadeSizeCurveEnabled.value = fadeSizeCurve ? 1 : 0
+    uniforms.fadeSizeCurveEnabled.value = fadeSizeCurve || curveTexturePath ? 1 : 0
 
     // Fade opacity curve (when enabled, uses curve instead of fadeOpacity prop)
-    uniforms.fadeOpacityCurveEnabled.value = fadeOpacityCurve ? 1 : 0
+    uniforms.fadeOpacityCurveEnabled.value = fadeOpacityCurve || curveTexturePath ? 1 : 0
 
     // Orient axis
     uniforms.orientAxisType.value = axisToNumber(orientAxis)
@@ -712,24 +760,39 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
     rotationSpeedCurve,
     fadeSizeCurve,
     fadeOpacityCurve,
+    curveTexturePath,
     orientAxis,
     stretchBySpeed,
   ])
 
   // GPU Storage arrays
-  const storage: ParticleStorageArrays = useMemo(
-    () => ({
+  // ADDITIVE: Color arrays only created when needed (multiple colors or color transition)
+  const storage: ParticleStorageArrays = useMemo(() => {
+    const arrays: ParticleStorageArrays = {
       positions: instancedArray(activeMaxParticles, 'vec3'),
       velocities: instancedArray(activeMaxParticles, 'vec3'),
       lifetimes: instancedArray(activeMaxParticles, 'float'),
       fadeRates: instancedArray(activeMaxParticles, 'float'),
       particleSizes: instancedArray(activeMaxParticles, 'float'),
-      particleRotations: instancedArray(activeMaxParticles, 'vec3'),
-      particleColorStarts: instancedArray(activeMaxParticles, 'vec3'),
-      particleColorEnds: instancedArray(activeMaxParticles, 'vec3'),
-    }),
-    [activeMaxParticles]
-  )
+      // Optional arrays - null when feature unused (saves GPU memory)
+      particleRotations: null,
+      particleColorStarts: null,
+      particleColorEnds: null,
+    }
+
+    // Only create rotation array if rotation or rotationSpeed is non-default
+    if (activeFeatures.needsRotation) {
+      arrays.particleRotations = instancedArray(activeMaxParticles, 'vec3')
+    }
+
+    // Only create color arrays if needed (multiple start colors or color transition)
+    if (activeFeatures.needsPerParticleColor) {
+      arrays.particleColorStarts = instancedArray(activeMaxParticles, 'vec3')
+      arrays.particleColorEnds = instancedArray(activeMaxParticles, 'vec3')
+    }
+
+    return arrays
+  }, [activeMaxParticles, activeFeatures.needsRotation, activeFeatures.needsPerParticleColor])
 
   // Initialize all particles as dead
   const computeInit = useMemo(
@@ -1265,6 +1328,16 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
         uniforms.rotationSpeedMaxZ.value = rotSpeed3D[2][1]
       }
 
+      // Update rotation storage state if rotation values changed (triggers storage array recreation)
+      if ('rotation' in newValues || 'rotationSpeed' in newValues) {
+        const rot = newValues.rotation ?? debugValuesRef.current?.rotation ?? [0, 0]
+        const rotSpeed = newValues.rotationSpeed ?? debugValuesRef.current?.rotationSpeed ?? [0, 0]
+        const needsRotation = isNonDefaultRotation(rot) || isNonDefaultRotation(rotSpeed)
+        if (needsRotation !== activeNeedsRotation) {
+          setActiveNeedsRotation(needsRotation)
+        }
+      }
+
       // Intensity
       if ('intensity' in newValues) {
         uniforms.intensity.value = newValues.intensity || 1
@@ -1316,6 +1389,16 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
               uniforms[`colorEnd${i}`].value.setRGB(...c)
             }
           })
+        }
+      }
+
+      // Update per-particle color state if colors changed (triggers storage array recreation)
+      if ('colorStart' in newValues || 'colorEnd' in newValues) {
+        const startLen = newValues.colorStart?.length ?? debugValuesRef.current?.colorStart?.length ?? 1
+        const hasColorEnd = 'colorEnd' in newValues ? newValues.colorEnd !== null : debugValuesRef.current?.colorEnd !== null
+        const needsPerParticle = startLen > 1 || hasColorEnd
+        if (needsPerParticle !== activeNeedsPerParticleColor) {
+          setActiveNeedsPerParticleColor(needsPerParticle)
         }
       }
 
@@ -1474,6 +1557,8 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
       activeOrientToDirection,
       activeShadow,
       activeGeometry,
+      activeNeedsPerParticleColor,
+      activeNeedsRotation,
       geometry,
     ]
   )
@@ -1484,6 +1569,7 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
 
     // Initialize debug values from props
     const initialValues = {
+      name, // Include name for curve baking filename
       maxParticles,
       size,
       colorStart,

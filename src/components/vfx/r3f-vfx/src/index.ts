@@ -8,11 +8,13 @@ export {
   Lighting,
   bakeCurveToArray,
   createCombinedCurveTexture,
-} from './VFXParticles';
+} from './VFXParticles'
 
-export { VFXEmitter, useVFXEmitter } from './VFXEmitter';
+export { VFXEmitter, useVFXEmitter } from './VFXEmitter'
 
-export { useVFXStore } from './react-store';
+export { useVFXStore } from './react-store'
+
+export { useCurveTextureAsync } from './useCurveTextureAsync'
 
 // Re-export types from core-vfx for convenience
 export type {
@@ -27,4 +29,4 @@ export type {
   FlipbookConfig,
   StretchConfig,
   BaseParticleProps,
-} from 'core-vfx';
+} from 'core-vfx'

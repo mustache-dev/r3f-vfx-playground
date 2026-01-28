@@ -179,6 +179,8 @@ export const Slash = () => {
 
       <VFXParticles
         // debug
+        // debug
+        curveTexturePath="/vfx/sparks.bin"
         name="sparks"
         maxParticles={1000}
         position={[0, 0, 0]}
@@ -186,18 +188,7 @@ export const Slash = () => {
         intensity={40}
         size={[0.05, 0.18]}
         fadeSize={[1, 0]}
-        fadeSizeCurve={{
-          points: [
-            {
-              pos: [0, 1],
-              handleOut: [0, 0],
-            },
-            {
-              pos: [1, 0],
-              handleIn: [-0.58, 0],
-            },
-          ],
-        }}
+
         colorStart={['#FF711E', '#3d91ff']}
         fadeOpacity={[1, 0]}
         gravity={[0, 0.3, 0]}
@@ -212,11 +203,7 @@ export const Slash = () => {
           [0, 1],
           [-1, 1],
         ]}
-        startPosition={[
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ]}
+
         rotation={[0, 0]}
         rotationSpeed={[0, 0]}
         appearance="gradient"

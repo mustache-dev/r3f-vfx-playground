@@ -8,6 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'core-vfx': path.resolve(__dirname, './src/components/vfx/core-vfx/src'),
     },
   },
 })

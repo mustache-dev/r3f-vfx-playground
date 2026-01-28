@@ -7,14 +7,11 @@ export const Dodge = () => {
         name="dodge"
         autoStart={false}
         geometry={new CapsuleGeometry(0.25, 0.5, 4, 15)}
-        position={[0, 0, 0]}
         maxParticles={100}
         size={[2, 2]}
         fadeSize={[1, 1]}
         colorStart={['#63acff']}
         fadeOpacity={[0.01, 0]}
-        gravity={[0, 0, 0]}
-        speed={[0, 0]}
         lifetime={[0.3, 0.3]}
         friction={{
           intensity: 0,
@@ -25,13 +22,7 @@ export const Dodge = () => {
           [0, 1],
           [-1, 1],
         ]}
-        startPosition={[
-          [0, 0],
-          [0, 0],
-          [0, 0],
-        ]}
-        rotation={[0, 0]}
-        rotationSpeed={[0, 0]}
+
         appearance="gradient"
         blending={1}
         lighting="basic"
@@ -43,9 +34,8 @@ export const Dodge = () => {
       />
       <VFXParticles
         name="dodge-sparks"
-        maxCount={100}
+        maxParticles={100}
         autoStart={false}
-        position={[0, 0, 0]}
         intensity={4}
         size={[0.01, 0.07]}
         fadeSize={[1, 0]}
@@ -69,7 +59,6 @@ export const Dodge = () => {
           [-0.3, 0.3],
         ]}
         rotation={[0, 0]}
-        rotationSpeed={[0, 0]}
         appearance="gradient"
         blending={2}
         lighting="basic"
