@@ -3,6 +3,7 @@ export type {
   ParticleStorageArrays,
   ParticleUniforms,
   MaterialOptions,
+  ShaderFeatures,
 } from './types';
 
 // Helper functions

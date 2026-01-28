@@ -20,6 +20,16 @@ export type ParticleStorageArrays = {
 // These are TSL uniform nodes created by uniform(), which extend Node
 export type ParticleUniforms = Record<string, Node>
 
+// Feature flags for conditional shader generation
+// When a feature is disabled, its uniforms and shader code are skipped entirely
+export type ShaderFeatures = {
+  turbulence: boolean    // Curl noise turbulence
+  attractors: boolean    // Point/vortex attractors (up to 4)
+  collision: boolean     // Plane collision with bounce/die
+  rotation: boolean      // Per-particle rotation and rotation speed
+  perParticleColor: boolean // Per-particle color arrays (vs single uniform color)
+}
+
 // Material creation options
 export type MaterialOptions = {
   alphaMap: THREE.Texture | null

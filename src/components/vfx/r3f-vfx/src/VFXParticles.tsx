@@ -387,14 +387,21 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
   const emitterRadiusRange = useMemo(() => toRange(emitterRadius, [0, 1]), [emitterRadius])
   const emitterHeightRange = useMemo(() => toRange(emitterHeight, [0, 1]), [emitterHeight])
 
-  // Determine which features need per-particle data
+  // Determine which features are active (affects storage arrays and shader generation)
   // Uses state so debug panel can trigger storage array recreation
   const activeFeatures = useMemo(
     () => ({
+      // Storage array features
       needsPerParticleColor: activeNeedsPerParticleColor,
       needsRotation: activeNeedsRotation,
+      // Shader features (skip code entirely when disabled)
+      turbulence: turbulence !== null && (turbulence?.intensity ?? 0) > 0,
+      attractors: attractors !== null && attractors.length > 0,
+      collision: collision !== null,
+      rotation: activeNeedsRotation,
+      perParticleColor: activeNeedsPerParticleColor,
     }),
-    [activeNeedsPerParticleColor, activeNeedsRotation]
+    [activeNeedsPerParticleColor, activeNeedsRotation, turbulence, attractors, collision]
   )
 
   // Parse friction object: { intensity: [start, end] or single value, easing: string }
@@ -807,9 +814,16 @@ export const VFXParticles = forwardRef<unknown, VFXParticlesProps>(function VFXP
   )
 
   // Update particles each frame (framerate independent)
+  // Pass shader features to generate optimized shader (skip unused code)
   const computeUpdate = useMemo(
-    () => createUpdateCompute(storage, uniforms, curveTexture, activeMaxParticles),
-    [storage, uniforms, curveTexture, activeMaxParticles]
+    () => createUpdateCompute(storage, uniforms, curveTexture, activeMaxParticles, {
+      turbulence: activeFeatures.turbulence,
+      attractors: activeFeatures.attractors,
+      collision: activeFeatures.collision,
+      rotation: activeFeatures.rotation,
+      perParticleColor: activeFeatures.perParticleColor,
+    }),
+    [storage, uniforms, curveTexture, activeMaxParticles, activeFeatures]
   )
 
   // Material (either Sprite or Mesh material based on geometry prop)
